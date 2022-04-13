@@ -119,3 +119,12 @@ def train(config_path: Path, evaluate_only: bool):
 
 if __name__ == "__main__":
     train()
+    
+    # Print model and number of parameters
+    config_path = sys.argv[1]
+    cfg = utils.load_config(config_path)
+    model = tops.to_cuda(instantiate(cfg.model))
+    print(model.feature_extractor)
+
+    num_of_params = sum(p.numel() for p in model.feature_extractor.parameters() if p.requires_grad)
+    print("Number of parameters: ", num_of_params)
