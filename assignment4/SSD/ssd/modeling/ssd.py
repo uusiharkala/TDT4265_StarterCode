@@ -42,8 +42,10 @@ class SSD300(nn.Module):
         locations = []
         confidences = []
         for idx, x in enumerate(features):
-            bbox_delta = self.regression_heads[idx](x).view(x.shape[0], 4, -1)
-            bbox_conf = self.classification_heads[idx](x).view(x.shape[0], self.num_classes, -1)
+            #bbox_delta = self.regression_heads[idx](x).view(x.shape[0], 4, -1)
+            bbox_delta = self.regression_heads[idx](x).reshape(x.shape[0], 4, -1)
+            #bbox_conf = self.classification_heads[idx](x).view(x.shape[0], self.num_classes, -1)
+            bbox_conf = self.classification_heads[idx](x).reshape(x.shape[0], self.num_classes, -1)
             locations.append(bbox_delta)
             confidences.append(bbox_conf)
         bbox_delta = torch.cat(locations, 2).contiguous()
