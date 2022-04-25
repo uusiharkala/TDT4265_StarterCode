@@ -35,6 +35,10 @@ class SSD300(nn.Module):
     def _init_weights(self):
         layers = [*self.regression_heads, *self.classification_heads]
         for layer in layers:
+        #    nn.init.constant_(layer.bias, 0)
+        #    nn.init.normal_(layer.weight, std=0.01)
+        #b = -torch.log(torch.Tensor([(1 - 0.01) / 0.01]))
+        #nn.init.constant_(self.classification_heads[-1].bias, float(b))
             for param in layer.parameters():
                 if param.dim() > 1: nn.init.xavier_uniform_(param)
 

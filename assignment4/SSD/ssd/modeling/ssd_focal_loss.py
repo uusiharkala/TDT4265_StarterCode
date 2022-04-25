@@ -4,6 +4,19 @@ import math
 import torch.nn.functional as F
 import numpy as np
 
+def focal_loss(p, y, gamma, alpha):
+        y_one_hot = F.one_hot(y, 9)
+        y_one_hot = torch.transpose(y_one_hot, 1, 2).contiguous()
+        #print("y_one_hot size: " + str(y_one_hot.size()))
+        #print("alpha size: " + str(self.alpha.size()))
+        #print("p size: " + str(p.size()))
+        a = torch.pow(1 - torch.exp(p), gamma)
+        b = p
+        #print("size a: " + str(a.size()))
+        #print("size b: " + str(b.size()))
+        loss = torch.sum(- alpha * a * y_one_hot * b, dim=1)
+        return loss
+
 class SSDFocalLoss(nn.Module):
     """
         Implements the loss as the sum of the followings:
@@ -21,7 +34,7 @@ class SSDFocalLoss(nn.Module):
         self.anchors = nn.Parameter(anchors(order="xywh").transpose(0, 1).unsqueeze(dim=0),
                                     requires_grad=False)
         self.gamma = 2
-        self.alpha = torch.Tensor([0.01, 1, 1, 1, 1, 1, 1, 1, 1])#.to("cuda:0")
+        self.alpha = torch.Tensor([0.01, 1, 1, 1, 1, 1, 1, 1, 1]).to("cuda:0")
         self.alpha = self.alpha.view(1, -1, 1)
 
     def _loc_vec(self, loc):
@@ -32,21 +45,6 @@ class SSDFocalLoss(nn.Module):
         gwh = self.scale_wh * (loc[:, 2:, :] / self.anchors[:, 2:, :]).log()
         return torch.cat((gxy, gwh), dim=1).contiguous()
 
-    def focal_loss(self, p, y):
-        y_one_hot = F.one_hot(y, 9)
-        y_one_hot = torch.transpose(y_one_hot, 1, 2).contiguous()
-        #print("y_one_hot size: " + str(y_one_hot.size()))
-        #print("alpha size: " + str(self.alpha.size()))
-        #print("p size: " + str(p.size()))
-        a = torch.pow(1 - torch.exp(p), self.gamma)
-        b = p
-        #print("size a: " + str(a.size()))
-        #print("size b: " + str(b.size()))
-        loss = -self.alpha * a * b
-        #print(loss.nonzero())
-        loss = torch.sum(loss, dim=1)
-        loss = torch.mean(loss)
-        return loss
 
     def forward(self,
                 bbox_delta: torch.FloatTensor, confs: torch.FloatTensor,
@@ -62,12 +60,11 @@ class SSDFocalLoss(nn.Module):
         gt_bbox = gt_bbox.transpose(1, 2).contiguous()  # reshape to [batch_size, 4, num_anchors]
         with torch.no_grad():
             #to_log = - F.log_softmax(confs, dim=1)[:, 0]
-            net_out = F.log_softmax(confs, dim=1)
+            to_log = F.log_softmax(confs, dim=1)
             #mask = hard_negative_mining(to_log, gt_labels, 3.0)
         #classification_loss = F.cross_entropy(confs, gt_labels, reduction="none")
-        classification_loss = self.focal_loss(net_out, gt_labels)
-        #classification_loss = classification_loss.sum()
-        print("Classification Loss: " + str(classification_loss))
+        classification_loss = focal_loss(to_log, gt_labels, self.gamma, self.alpha)
+        classification_loss = classification_loss.sum() 
 
         pos_mask = (gt_labels > 0).unsqueeze(1).repeat(1, 4, 1)
         bbox_delta = bbox_delta[pos_mask]
@@ -80,5 +77,7 @@ class SSDFocalLoss(nn.Module):
             regression_loss=regression_loss / num_pos,
             classification_loss=classification_loss / num_pos,
             total_loss=total_loss
-        )
+            )
+        print("Classification Loss: " + str(to_log["classification_loss"]))
+        print("Total Loss: " + str(to_log["total_loss"]))
         return total_loss, to_log

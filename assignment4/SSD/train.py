@@ -118,6 +118,7 @@ def train(config_path: Path, evaluate_only: bool):
 
 
 if __name__ == "__main__":
+    torch.cuda.empty_cache()
     train()
     
     # Print model and number of parameters

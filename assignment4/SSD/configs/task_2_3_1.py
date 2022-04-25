@@ -12,8 +12,8 @@ from .utils import get_dataset_dir, get_output_dir
 ## to Task 2.2
 
 # Import everything from the baseline of Task 2.1
-from .task_2_1 import train, optimizer, schedulers, backbone, model, data_train, data_val, loss_objective, val_cpu_transform, label_map, anchors
-from .task_2_2 import train_cpu_transform, gpu_transform_train
+from .task_2_3_0 import train, optimizer, schedulers, backbone, model, data_train, data_val, loss_objective, val_cpu_transform, label_map, anchors, train_cpu_transform, gpu_transform_train
+
 
 train.epochs = 50
 
