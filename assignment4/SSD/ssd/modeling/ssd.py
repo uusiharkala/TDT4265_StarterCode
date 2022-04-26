@@ -35,14 +35,20 @@ class SSD300(nn.Module):
     def _init_weights(self):
         layers = [*self.regression_heads, *self.classification_heads]
         for layer in layers:
-        #    nn.init.constant_(layer.bias, 0)
-        #    nn.init.normal_(layer.weight, std=0.01)
-        #b = -torch.log(torch.Tensor([(1 - 0.01) / 0.01]))
-        #nn.init.constant_(self.classification_heads[-1].bias, float(b))
-            for param in layer.parameters():
-                if param.dim() > 1: nn.init.xavier_uniform_(param)
-            else:
-                nn.init.constant_(layer.bias, 0)
+        ## Improved Initialization
+           nn.init.constant_(layer.bias, 0)
+           nn.init.normal_(layer.weight, std=0.01)
+        b = -torch.log(torch.Tensor([(1 - 0.01) / 0.01]))
+        bias_per_class = int(list(self.classification_heads[-1].bias.size())[0] / self.num_classes)
+        nn.init.constant_(self.classification_heads[-1].bias[:bias_per_class], float(b))
+        #print(self.classification_heads[-1].bias)
+
+
+        ## Standart Initialization
+        #    for param in layer.parameters():
+        #        if param.dim() > 1: nn.init.xavier_uniform_(param)
+        #    else:
+        #        nn.init.constant_(layer.bias, 0)
 
     def regress_boxes(self, features):
         locations = []

@@ -7,13 +7,8 @@ import numpy as np
 def focal_loss(confs, y, gamma, alpha):
         y_one_hot = F.one_hot(y, 9)
         y_one_hot_a = torch.transpose(y_one_hot, 1, 2).contiguous()
-        #print("y_one_hot size: " + str(y_one_hot.size()))
-        #print("alpha size: " + str(self.alpha.size()))
-        #print("p size: " + str(p.size()))
         a = torch.pow(1 - F.softmax(confs, dim=1), gamma)
         b = F.log_softmax(confs, dim=1)
-        #print("size a: " + str(a.size()))
-        #print("size b: " + str(b.size()))
         loss = torch.sum(- alpha * a * y_one_hot_a * b, dim=1)
         return loss
 
@@ -58,8 +53,7 @@ class SSDFocalLoss(nn.Module):
         """
 
         gt_bbox = gt_bbox.transpose(1, 2).contiguous()  # reshape to [batch_size, 4, num_anchors]
-        #to_log = F.log_softmax(confs, dim=1)
-        #classification_loss = F.cross_entropy(confs, gt_labels, reduction="none")
+
         classification_loss = focal_loss(confs, gt_labels, self.gamma, self.alpha)
         classification_loss = classification_loss.sum()
 
