@@ -7,7 +7,7 @@ from collections import OrderedDict
 
 
 
-class ResNet(torch.nn.Module):
+class FPN(torch.nn.Module):
 
     def __init__(self,
             output_channels: List[int],
@@ -83,7 +83,7 @@ class ResNet(torch.nn.Module):
             x = self.extras[i](x)
             out_features.append(x)
 
-                    
+
         out_features_dict = OrderedDict()
         for i, feature in enumerate(out_features):
           out_features_dict[str(i)] = feature
@@ -92,19 +92,18 @@ class ResNet(torch.nn.Module):
         out_features = list(out_features.values())
 
         # Dimension Check
-        #for idx, feature in enumerate(out_features):
-        #    out_channel = self.out_channels[idx]
-        #    h, w = self.output_feature_shape[idx]
-        #    expected_shape = (out_channel, h, w)
-        #    #print("Expected shape: "+ str(out_channel) + ", " + str(h) + ", " + str(w) + ", got: " + str(feature.shape[1:]) + " at output IDX: {idx}")
-        #    assert feature.shape[1:] == expected_shape, \
-        #        f"Expected shape: {expected_shape}, got: {feature.shape[1:]} at output IDX: {idx}"
-        #    assert len(out_features) == len(self.output_feature_shape),\
-        #    f"Expected that the length of the outputted features to be: {len(self.output_feature_shape)}, " \
-        #    f"but it was: {len(out_features)}"
+        for idx, feature in enumerate(out_features):
+           out_channel = self.out_channels[idx]
+           h, w = self.output_feature_shape[idx]
+           expected_shape = (out_channel, h, w)
+           #print("Expected shape: "+ str(out_channel) + ", " + str(h) + ", " + str(w) + ", got: " + str(feature.shape[1:]) + " at output IDX: {idx}")
+           assert feature.shape[1:] == expected_shape, \
+               f"Expected shape: {expected_shape}, got: {feature.shape[1:]} at output IDX: {idx}"
+           assert len(out_features) == len(self.output_feature_shape),\
+           f"Expected that the length of the outputted features to be: {len(self.output_feature_shape)}, " \
+           f"but it was: {len(out_features)}"
         # End Dimension Check
 
 
 
         return tuple(out_features)
-

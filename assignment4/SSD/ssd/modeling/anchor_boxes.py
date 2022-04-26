@@ -8,9 +8,9 @@ from math import sqrt
 # It's a trick to improve gradients from bounding box regression. Take a look at this post about more info:
 # https://leimao.github.io/blog/Bounding-Box-Encoding-Decoding/
 class AnchorBoxes(object):
-    def __init__(self, 
-            image_shape: tuple, 
-            feature_sizes: List[tuple], 
+    def __init__(self,
+            image_shape: tuple,
+            feature_sizes: List[tuple],
             min_sizes: List[int],
             strides: List[tuple],
             aspect_ratios: List[int],
@@ -43,8 +43,8 @@ class AnchorBoxes(object):
             for r in aspect_ratios[fidx]:
                 h = h_min*sqrt(r)
                 w = w_min/sqrt(r)
-                bbox_sizes.append((h_min*sqrt(r), w_min/sqrt(r)))
-                bbox_sizes.append((h_min/sqrt(r), w_min*sqrt(r)))
+                bbox_sizes.append((w_min/sqrt(r), h_min*sqrt(r)))
+                bbox_sizes.append((w_min*sqrt(r), h_min/sqrt(r)))
             scale_y = image_shape[0] / strides[fidx][0]
             scale_x = image_shape[1] / strides[fidx][1]
             for w, h in bbox_sizes:

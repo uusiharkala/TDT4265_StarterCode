@@ -51,7 +51,7 @@ class SSDMultiboxLoss(nn.Module):
         gxy = self.scale_xy*(loc[:, :2, :] - self.anchors[:, :2, :])/self.anchors[:, 2:, ]
         gwh = self.scale_wh*(loc[:, 2:, :]/self.anchors[:, 2:, :]).log()
         return torch.cat((gxy, gwh), dim=1).contiguous()
-    
+
     def forward(self,
             bbox_delta: torch.FloatTensor, confs: torch.FloatTensor,
             gt_bbox: torch.FloatTensor, gt_labels: torch.LongTensor):
@@ -65,11 +65,10 @@ class SSDMultiboxLoss(nn.Module):
         gt_bbox = gt_bbox.transpose(1, 2).contiguous() # reshape to [batch_size, 4, num_anchors]
         with torch.no_grad():
             to_log = - F.log_softmax(confs, dim=1)[:, 0]
-            print("to_log dims" + str(to_log.size()))
             mask = hard_negative_mining(to_log, gt_labels, 3.0)
         classification_loss = F.cross_entropy(confs, gt_labels, reduction="none")
         classification_loss = classification_loss[mask].sum()
-        
+
         pos_mask = (gt_labels > 0).unsqueeze(1).repeat(1, 4, 1)
         bbox_delta = bbox_delta[pos_mask]
         gt_locations = self._loc_vec(gt_bbox)
