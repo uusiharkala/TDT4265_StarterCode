@@ -4,7 +4,7 @@ from .anchor_encoder import AnchorEncoder
 from torchvision.ops import batched_nms
 
 
-class SSD300(nn.Module):
+class SSD300_ext_heads(nn.Module):
     def __init__(self,
             feature_extractor: nn.Module,
             anchors,
@@ -22,46 +22,67 @@ class SSD300(nn.Module):
         self.regression_heads = []
         self.classification_heads = []
 
+        # FeatureMap Size:torch.Size([32, 256, 32, 256])
+        # FeatureMap Size:torch.Size([32, 256, 16, 128])
+        # FeatureMap Size:torch.Size([32, 256, 8, 64])
+        # FeatureMap Size:torch.Size([32, 256, 4, 32])
+        # FeatureMap Size:torch.Size([32, 256, 2, 16])
+        # FeatureMap Size:torch.Size([32, 256, 1, 8])
 
-        # Initialize output heads that are applied to each feature map from the backbone.
-        for n_boxes, out_ch in zip(anchors.num_boxes_per_fmap, self.feature_extractor.out_channels):
-            self.regression_heads.append(nn.Conv2d(out_ch, n_boxes * 4, kernel_size=3, padding=1))
-            self.classification_heads.append(nn.Conv2d(out_ch, n_boxes * self.num_classes, kernel_size=3, padding=1))
 
-        self.regression_heads = nn.ModuleList(self.regression_heads)
-        self.classification_heads = nn.ModuleList(self.classification_heads)
+        self.out_ch = self.feature_extractor.out_channels[0]
+        # print("self.feature_extractor.out_channels: " + str(self.feature_extractor.out_channels))
+        self.n_boxes = anchors.num_boxes_per_fmap[0]
+        # print("num_boxes_per_fmap: " + str(anchors.num_boxes_per_fmap))
+        self.regression_ext_heads = nn.Sequential(nn.Conv2d(self.out_ch,self.out_ch, kernel_size=3, padding=1),
+                                nn.ReLU(),
+                                nn.Conv2d(self.out_ch,self.out_ch, kernel_size=3, padding=1),
+                                nn.ReLU(),
+                                nn.Conv2d(self.out_ch,self.out_ch, kernel_size=3, padding=1),
+                                nn.ReLU(),
+                                nn.Conv2d(self.out_ch,self.out_ch, kernel_size=3, padding=1),
+                                nn.ReLU(),
+                                nn.Conv2d(self.out_ch, self.n_boxes * 4, kernel_size=3, padding=1))
+
+        self.classification_ext_heads = nn.Sequential(nn.Conv2d(self.out_ch,self.out_ch, kernel_size=3, padding=1),
+                                nn.ReLU(),
+                                nn.Conv2d(self.out_ch,self.out_ch, kernel_size=3, padding=1),
+                                nn.ReLU(),
+                                nn.Conv2d(self.out_ch,self.out_ch, kernel_size=3, padding=1),
+                                nn.ReLU(),
+                                nn.Conv2d(self.out_ch,self.out_ch, kernel_size=3, padding=1),
+                                nn.ReLU(),
+                                nn.Conv2d(self.out_ch, self.n_boxes * self.num_classes, kernel_size=3, padding=1))
+
         self.anchor_encoder = AnchorEncoder(anchors)
         self._init_weights()
 
     def _init_weights(self):
-        layers = [*self.regression_heads, *self.classification_heads]
+        layers = [*self.regression_ext_heads, *self.classification_ext_heads]
         for layer in layers:
-        ## Improved Initialization
-           nn.init.constant_(layer.bias, 0)
-           nn.init.normal_(layer.weight, std=0.01)
+            if isinstance(layer, nn.Conv2d):
+                nn.init.constant_(layer.bias, 0)
+                nn.init.normal_(layer.weight, std=0.01)
         b = -torch.log(torch.Tensor([(1 - 0.01) / 0.01]))
-        for heads in self.classification_heads:
-            if isinstance(heads, list):
-                bias_per_class = int(list(self.classification_heads[-1][-1].bias.size())[0] / self.num_classes)
-                nn.init.constant_(heads[-1].bias[:bias_per_class], float(b))
-            else:
-                bias_per_class = int(list(self.classification_heads[-1].bias.size())[0] / self.num_classes)
-                nn.init.constant_(heads.bias[:bias_per_class], float(b))
+        bias_per_class = int(list(self.classification_ext_heads[-1].bias.size())[0] / self.num_classes)
+        nn.init.constant_(self.classification_ext_heads[-1].bias[:bias_per_class], float(b))
+
+        #bias_per_class = int(list(self.classification_heads[-1].bias.size())[0] / self.num_classes)
+        #nn.init.constant_(self.classification_heads[-1].bias[:bias_per_class], float(b))
         ## Standart Initialization
-           # for param in layer.parameters():
-           #     if param.dim() > 1: nn.init.xavier_uniform_(param)
-           # else:
-           #     nn.init.constant_(layer.bias, 0)
+        #    for param in layer.parameters():
+        #        if param.dim() > 1: nn.init.xavier_uniform_(param)
+        #    else:
+        #        nn.init.constant_(layer.bias, 0)
 
     def regress_boxes(self, features):
         locations = []
         confidences = []
         for idx, x in enumerate(features):
-            #print("FeatureMap Size:" + str(x.size()))
             #bbox_delta = self.regression_heads[idx](x).view(x.shape[0], 4, -1)
-            bbox_delta = self.regression_heads[idx](x).reshape(x.shape[0], 4, -1)
+            bbox_delta = self.regression_ext_heads(x).reshape(x.shape[0], 4, -1)
             #bbox_conf = self.classification_heads[idx](x).view(x.shape[0], self.num_classes, -1)
-            bbox_conf = self.classification_heads[idx](x).reshape(x.shape[0], self.num_classes, -1)
+            bbox_conf = self.classification_ext_heads(x).reshape(x.shape[0], self.num_classes, -1)
             locations.append(bbox_delta)
             confidences.append(bbox_conf)
         bbox_delta = torch.cat(locations, 2).contiguous()

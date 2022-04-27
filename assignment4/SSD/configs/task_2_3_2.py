@@ -2,7 +2,7 @@ from .task_2_2 import (
     train,
     optimizer,
     schedulers,
-    loss_objective,
+    #loss_objective,
     model,
     #backbone,
     data_train,
