@@ -41,12 +41,8 @@ class SSD300(nn.Module):
            nn.init.normal_(layer.weight, std=0.01)
         b = -torch.log(torch.Tensor([(1 - 0.01) / 0.01]))
         for heads in self.classification_heads:
-            if isinstance(heads, list):
-                bias_per_class = int(list(self.classification_heads[-1][-1].bias.size())[0] / self.num_classes)
-                nn.init.constant_(heads[-1].bias[:bias_per_class], float(b))
-            else:
-                bias_per_class = int(list(self.classification_heads[-1].bias.size())[0] / self.num_classes)
-                nn.init.constant_(heads.bias[:bias_per_class], float(b))
+            bias_per_class = int(list(self.classification_heads[-1].bias.size())[0] / self.num_classes)
+            nn.init.constant_(heads.bias[:bias_per_class], float(b))
         ## Standart Initialization
            # for param in layer.parameters():
            #     if param.dim() > 1: nn.init.xavier_uniform_(param)

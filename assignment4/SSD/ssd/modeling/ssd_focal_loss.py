@@ -29,7 +29,7 @@ class SSDFocalLoss(nn.Module):
         self.anchors = nn.Parameter(anchors(order="xywh").transpose(0, 1).unsqueeze(dim=0),
                                     requires_grad=False)
         self.gamma = 2
-        self.alpha = torch.Tensor([0.01, 1, 1, 1, 1, 1, 1, 1, 1]).to("cuda:0")
+        self.alpha = torch.Tensor([10, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000]).to("cuda:0")
         self.alpha = self.alpha.view(1, -1, 1)
 
     def _loc_vec(self, loc):
@@ -66,7 +66,7 @@ class SSDFocalLoss(nn.Module):
         total_loss = regression_loss / num_pos + classification_loss
         to_log = dict(
             regression_loss=regression_loss / num_pos,
-            classification_loss=classification_loss / num_pos,
+            classification_loss=classification_loss,
             total_loss=total_loss
             )
         #print("Classification Loss: " + str(to_log["classification_loss"]))
