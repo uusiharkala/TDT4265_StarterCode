@@ -122,6 +122,13 @@ class SSD300_ext_heads(nn.Module):
             predictions.append((boxes, categories, scores))
         return predictions
 
+    def get_feature_maps(self, x):
+        fms = self.feature_extractor(x)
+        fms_dict = {}
+        for index, fm in enumerate(fms):
+            fms_dict["feat_" + str(index)] = fm
+        return fms_dict
+
 
 def filter_predictions(
         boxes_ltrb: torch.Tensor, confs: torch.Tensor,

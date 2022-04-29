@@ -97,6 +97,12 @@ class SSD300(nn.Module):
             predictions.append((boxes, categories, scores))
         return predictions
 
+    def get_feature_maps(self, x):
+        fms = self.feature_extractor(x)
+        print("blablabla")
+
+
+
 
 def filter_predictions(
         boxes_ltrb: torch.Tensor, confs: torch.Tensor,

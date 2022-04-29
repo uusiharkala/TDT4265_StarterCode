@@ -1,18 +1,23 @@
-import time
-import click
-import torch
+import cv2
+import os
 import tops
-from ssd import utils
-from pathlib import Path
+import click
+import numpy as np
 from tops.config import instantiate
+from tops.config import LazyCall as L
 from tops.checkpointer import load_checkpoint
+from vizer.draw import draw_boxes
+from ssd import utils
+from tqdm import tqdm
+from ssd.data.transforms import ToTensor
+
+import torch
+import torch.nn as nn
 
 #Additional imports
 import warnings
 warnings.filterwarnings('ignore')
 warnings.simplefilter('ignore')
-import cv2
-import numpy as np
 import torchvision
 from pytorch_grad_cam import AblationCAM, EigenCAM
 from pytorch_grad_cam.ablation_layer import AblationLayerFasterRCNN
@@ -21,28 +26,11 @@ from pytorch_grad_cam.utils.reshape_transforms import fasterrcnn_reshape_transfo
 from pytorch_grad_cam.utils.image import show_cam_on_image, scale_accross_batch_and_channels, scale_cam_image
 import requests
 from PIL import Image
-from vizer.draw import draw_boxes
-from ssd import utils
-from tqdm import tqdm
-from ssd.data.transforms import ToTensor
+
 
 
 coco_names = ['__background__', 'car', 'truck', 'bus', 'motorcycle', 'bicycle',
                 'scooter', 'person', 'rider']
-# coco_names = ['__background__', 'person', 'bicycle', 'car', 'motorcycle', 'airplane', \
-#               'bus', 'train', 'truck', 'boat', 'traffic light', 'fire hydrant', 'N/A',
-#               'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep',
-#               'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'N/A', 'backpack', 'umbrella',
-#               'N/A', 'N/A', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard',
-#               'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard',
-#               'surfboard', 'tennis racket', 'bottle', 'N/A', 'wine glass', 'cup', 'fork',
-#               'knife', 'spoon', 'bowl', 'banana', 'apple', 'sandwich', 'orange',
-#               'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
-#               'potted plant', 'bed', 'N/A', 'dining table', 'N/A', 'N/A', 'toilet',
-#               'N/A', 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave',
-#               'oven', 'toaster', 'sink', 'refrigerator', 'N/A', 'book', 'clock', 'vase',
-#               'scissors', 'teddy bear', 'hair drier', 'toothbrush']
-
 
 # This will help us create a different color for each class
 COLORS = np.random.uniform(0, 255, size=(len(coco_names), 3))
@@ -51,15 +39,40 @@ class RetinaNetModelOutputWrapper(torch.nn.Module):
     def __init__(self, model):
         super().__init__()
         self.model = model
+        self.feature_extractor = model.feature_extractor
     def forward(self, x):
         # Forward pass
         output = self.model(x)
+
         # convert the original model output (from init) into a dict
         return_dict = {}
         return_dict["boxes"] = output[0][0]
         return_dict["labels"] = output[0][1]
         return_dict["scores"] = output[0][2]
-        return return_dict
+        return [return_dict]
+
+def renormalize_cam_in_bounding_boxes(boxes, image_float, grayscale_cam, labels, label_map, scores):
+    """Normalize the CAM to be in the range [0, 1]
+    inside every bounding boxes, and zero outside of the bounding boxes. """
+    renormalized_cam = np.zeros(grayscale_cam.shape, dtype=np.float32)
+    images = []
+    for x1, y1, x2, y2 in boxes:
+        x1 = int(x1)
+        x2 = int(x2)
+        y1 = int(y1)
+        y2 = int(y2)
+        #print("x1: " + str(x1) + ", x2: " + str(x2) + ", y1: " + str(y1) + ", y2: " + str(y2))
+        img = renormalized_cam * 0
+        img[y1:y2, x1:x2] = scale_cam_image(grayscale_cam[y1:y2, x1:x2].copy())
+        images.append(img)
+
+    renormalized_cam = np.max(np.float32(images), axis = 0)
+    renormalized_cam = scale_cam_image(renormalized_cam)
+    eigencam_image_renormalized = show_cam_on_image(image_float, renormalized_cam, use_rgb=True)
+    image_with_bounding_boxes = draw_boxes(eigencam_image_renormalized, boxes, labels, scores, class_name_map=label_map)
+    #image_with_bounding_boxes = draw_boxes(boxes, labels, label_map, eigencam_image_renormalized)
+    return image_with_bounding_boxes
+
 
 def get_config(config_path):
     cfg = utils.load_config(config_path)
@@ -71,9 +84,9 @@ def get_config(config_path):
 
 def get_trained_model(cfg):
     model = tops.to_cuda(instantiate(cfg.model))
-    model.eval()
     ckpt = load_checkpoint(cfg.output_dir.joinpath("checkpoints"), map_location=tops.get_device())
     model.load_state_dict(ckpt["model"])
+    model.eval()
     return model
 
 
@@ -105,24 +118,42 @@ def convert_image_to_hwc_byte(image):
     image_h_w_c_format = image_pixel_values.permute(1, 2, 0)
     return image_h_w_c_format.cpu().numpy()
 
+def cam_reshape_transform(x):
+    target_size = torch.Size([16, 128])
+    activations = []
+    print(x)
+    for key, value in x.items():
+        activations.append(torch.nn.functional.interpolate(torch.abs(value), target_size, mode='bilinear'))
+    activations = torch.cat(activations, axis=1)
+    return activations
 
-def visualize_annotations_on_image(image, batch, label_map):
-    boxes = convert_boxes_coords_to_pixel_coords(batch["boxes"][0], batch["width"], batch["height"])
-    labels = batch["labels"][0].cpu().numpy().tolist()
-
-    image_with_boxes = draw_boxes(image, boxes, labels, class_name_map=label_map)
-    return image_with_boxes
-
-
-def visualize_model_predictions_on_image(image, img_transform, batch, model, label_map, score_threshold):
+def visualize_model_predictions_on_image(image, img_transform, batch, model, label_map, score_threshold, renormalized):
     pred_image = tops.to_cuda(batch["image"])
     transformed_image = img_transform({"image": pred_image})["image"]
-
     boxes, categories, scores = model(transformed_image, score_threshold=score_threshold)[0]
     boxes = convert_boxes_coords_to_pixel_coords(boxes.detach().cpu(), batch["width"], batch["height"])
     categories = categories.cpu().numpy().tolist()
+    # CAM stuff
+    wrapped_model = RetinaNetModelOutputWrapper(model)
+    target_layers = [wrapped_model.feature_extractor.fpn]
+    wrapped_model.model.eval()
+    targets = [FasterRCNNBoxScoreTarget(labels=categories, bounding_boxes=boxes)]
+    cam = EigenCAM(wrapped_model,
+               target_layers,
+               use_cuda=torch.cuda.is_available(),
+               reshape_transform=cam_reshape_transform)
 
-    image_with_predicted_boxes = draw_boxes(image, boxes, categories, scores, class_name_map=label_map)
+    grayscale_cam = cam(transformed_image, targets=targets)
+    # Take the first image in the batch:
+    grayscale_cam = grayscale_cam[0, :]
+
+    if renormalized:
+        image_with_predicted_boxes = renormalize_cam_in_bounding_boxes(boxes, image/255, grayscale_cam, categories, label_map, scores)
+    else:
+        cam_image = show_cam_on_image(image/255, grayscale_cam, use_rgb=True)
+        image_with_predicted_boxes = draw_boxes(cam_image, boxes, categories, scores, class_name_map=label_map)
+
+
     return image_with_predicted_boxes
 
 
@@ -131,21 +162,14 @@ def create_filepath(save_folder, image_id):
     return os.path.join(save_folder, filename)
 
 
-def create_comparison_image(batch, model, img_transform, label_map, score_threshold):
+def create_cam_image(batch, model, img_transform, label_map, score_threshold, renormalized):
     image = convert_image_to_hwc_byte(batch["image"])
-    image_with_annotations = visualize_annotations_on_image(image, batch, label_map)
     image_with_model_predictions = visualize_model_predictions_on_image(
-        image, img_transform, batch, model, label_map, score_threshold)
-
-    concatinated_image = np.concatenate([
-        image,
-        image_with_annotations,
-        image_with_model_predictions
-    ], axis=0)
-    return concatinated_image
+        image, img_transform, batch, model, label_map, score_threshold, renormalized)
+    return image_with_model_predictions
 
 
-def create_and_save_comparison_images(dataloader, model, cfg, save_folder, score_threshold, num_images):
+def create_and_save_cam_images(dataloader, model, cfg, save_folder, score_threshold, num_images, renormalized):
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
 
@@ -157,14 +181,14 @@ def create_and_save_comparison_images(dataloader, model, cfg, save_folder, score
     img_transform = instantiate(cfg.data_val.gpu_transform)
     for i in tqdm(range(num_images_to_save)):
         batch = next(dataloader)
-        comparison_image = create_comparison_image(batch, model, img_transform, cfg.label_map, score_threshold)
+        comparison_image = create_cam_image(batch, model, img_transform, cfg.label_map, score_threshold, renormalized)
         filepath = create_filepath(save_folder, i)
         cv2.imwrite(filepath, comparison_image[:, :, ::-1])
 
 
 def get_save_folder_name(cfg, dataset_to_visualize):
     return os.path.join(
-        "performance_assessment",
+        "cam_representation",
         cfg.run_name,
         dataset_to_visualize
     )
@@ -173,9 +197,10 @@ def get_save_folder_name(cfg, dataset_to_visualize):
 @click.command()
 @click.argument("config_path")
 @click.option("--train", default=False, is_flag=True, help="Use the train dataset instead of val")
-@click.option("-n", "--num_images", default=500, type=int, help="The max number of images to save")
-@click.option("-c", "--conf_threshold", default=0.3, type=float, help="The confidence threshold for predictions")
-def main(config_path, train, num_images, conf_threshold):
+@click.option("-n", "--num_images", default=20, type=int, help="The max number of images to save")
+@click.option("-c", "--conf_threshold", default=0.9, type=float, help="The confidence threshold for predictions")
+@click.option("--renormalized", default=False, is_flag=True, help="If the CAM should be renormalized")
+def main(config_path, train, num_images, conf_threshold, renormalized):
     cfg = get_config(config_path)
     model = get_trained_model(cfg)
 
@@ -187,7 +212,7 @@ def main(config_path, train, num_images, conf_threshold):
     dataloader = get_dataloader(cfg, dataset_to_visualize)
     save_folder = get_save_folder_name(cfg, dataset_to_visualize)
 
-    create_and_save_comparison_images(dataloader, model, cfg, save_folder, conf_threshold, num_images)
+    create_and_save_cam_images(dataloader, model, cfg, save_folder, conf_threshold, num_images, renormalized)
 
 
 if __name__ == '__main__':
