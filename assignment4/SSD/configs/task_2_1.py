@@ -1,5 +1,5 @@
 from .test_anchors.base import anchors
-from .tdt4265 import (
+from .tdt4265_updated import (
     train,
     optimizer,
     schedulers,

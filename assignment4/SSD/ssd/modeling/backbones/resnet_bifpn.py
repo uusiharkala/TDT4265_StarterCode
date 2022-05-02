@@ -16,7 +16,7 @@ class ResNet_BiFPN(torch.nn.Module):
         self.resnet = nn.ModuleList(list(torchvision.models.resnet18(pretrained=True).children())[:-1])
         self.out_channels = output_channels
         self.output_feature_shape = output_feature_sizes
-        self.bifpn = BiFPN(output_channels, feature_size=64, num_layers=1, epsilon=0.0001)
+        self.bifpn = BiFPN(output_channels, feature_size=256, num_layers=1, epsilon=0.0001)
 
         self.extras = nn.ModuleList([
             nn.Sequential(
@@ -30,7 +30,7 @@ class ResNet_BiFPN(torch.nn.Module):
             ),
         ])
         self.init_parameters()
-        self.out_channels = [64, 64, 64, 64, 64, 64]
+        self.out_channels = [256, 256, 256, 256, 256, 256]
 
     def init_parameters(self):
         for m in self.extras.modules():

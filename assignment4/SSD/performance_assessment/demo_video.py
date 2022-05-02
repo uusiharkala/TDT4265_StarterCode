@@ -26,7 +26,7 @@ def run_demo(config_path: str, score_threshold: float, video_path: str, output_p
     model.load_state_dict(ckpt["model"])
     width, height = 1024, 128
 
-    reader = cv2.VideoCapture(video_path) 
+    reader = cv2.VideoCapture(video_path)
     fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
     writer = cv2.VideoWriter(output_path, fourcc, 30, (width, height))
     cpu_transform = instantiate(cfg.data_val.dataset.transform)
@@ -49,6 +49,6 @@ def run_demo(config_path: str, score_threshold: float, video_path: str, output_p
             frame, boxes, categories, scores).astype(np.uint8)
         writer.write(frame[:, :, ::-1])
     print("Video saved to:", pathlib.Path(output_path).absolute())
-        
+
 if __name__ == '__main__':
     run_demo()
