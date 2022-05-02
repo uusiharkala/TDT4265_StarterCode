@@ -66,9 +66,9 @@ class BiFPNBlock(nn.Module):
         self.p8_out = DepthwiseConvBlock(feature_size, feature_size)
 
         # TODO: Init weights
-        self.w1 = nn.Parameter(torch.Tensor(2, 4))
+        self.w1 = nn.Parameter(torch.Tensor(2, 5))
         self.w1_relu = nn.ReLU()
-        self.w2 = nn.Parameter(torch.Tensor(3, 4))
+        self.w2 = nn.Parameter(torch.Tensor(3, 5))
         self.w2_relu = nn.ReLU()
 
     def forward(self, inputs):
@@ -82,10 +82,10 @@ class BiFPNBlock(nn.Module):
 
         p8_td = p8_x
         p7_td = self.p7_td(w1[0, 0] * p7_x + w1[1, 0] * F.interpolate(p8_td, scale_factor=2))
-        p6_td = self.p6_td(w1[0, 0] * p6_x + w1[1, 0] * F.interpolate(p7_td, scale_factor=2))
-        p5_td = self.p5_td(w1[0, 1] * p5_x + w1[1, 1] * F.interpolate(p6_td, scale_factor=2))
-        p4_td = self.p4_td(w1[0, 2] * p4_x + w1[1, 2] * F.interpolate(p5_td, scale_factor=2))
-        p3_td = self.p3_td(w1[0, 3] * p3_x + w1[1, 3] * F.interpolate(p4_td, scale_factor=2))
+        p6_td = self.p6_td(w1[0, 1] * p6_x + w1[1, 1] * F.interpolate(p7_td, scale_factor=2))
+        p5_td = self.p5_td(w1[0, 2] * p5_x + w1[1, 2] * F.interpolate(p6_td, scale_factor=2))
+        p4_td = self.p4_td(w1[0, 3] * p4_x + w1[1, 3] * F.interpolate(p5_td, scale_factor=2))
+        p3_td = self.p3_td(w1[0, 4] * p3_x + w1[1, 4] * F.interpolate(p4_td, scale_factor=2))
 
         # Calculate Bottom-Up Pathway
         p3_out = p3_td
@@ -93,19 +93,22 @@ class BiFPNBlock(nn.Module):
         p5_out = self.p5_out(w2[0, 1] * p5_x + w2[1, 1] * p5_td + w2[2, 1] * nn.Upsample(scale_factor=0.5)(p4_out))
         p6_out = self.p6_out(w2[0, 2] * p6_x + w2[1, 2] * p6_td + w2[2, 2] * nn.Upsample(scale_factor=0.5)(p5_out))
         p7_out = self.p7_out(w2[0, 3] * p7_x + w2[1, 3] * p7_td + w2[2, 3] * nn.Upsample(scale_factor=0.5)(p6_out))
-        p8_out = self.p8_out(w2[0, 3] * p8_x + w2[1, 3] * p8_td + w2[2, 3] * nn.Upsample(scale_factor=0.5)(p7_out))
+        p8_out = self.p8_out(w2[0, 4] * p8_x + w2[1, 4] * p8_td + w2[2, 4] * nn.Upsample(scale_factor=0.5)(p7_out))
 
         return [p3_out, p4_out, p5_out, p6_out, p7_out, p8_out]
 # Resnet18: output_channels=[64, 128, 256, 512, 1024, 2048]
 class BiFPN(nn.Module):
-    def __init__(self, size, feature_size=64, num_layers=2, epsilon=0.0001):
+    def __init__(self, size, feature_size=64, num_layers=1, epsilon=0.0001):
         super(BiFPN, self).__init__()
         self.p3 = nn.Conv2d(size[0], feature_size, kernel_size=1, stride=1, padding=0)
         self.p4 = nn.Conv2d(size[1], feature_size, kernel_size=1, stride=1, padding=0)
         self.p5 = nn.Conv2d(size[2], feature_size, kernel_size=1, stride=1, padding=0)
         self.p6 = nn.Conv2d(size[3], feature_size, kernel_size=1, stride=1, padding=0)
-        self.p7 = nn.Conv2d(size[4], feature_size, kernel_size=1, stride=1, padding=0)
-        self.p8 = nn.Conv2d(size[5], feature_size, kernel_size=1, stride=1, padding=0)
+        # p6 is obtained via a 3x3 stride-2 conv on C5
+        self.p7 = nn.Conv2d(size[3], feature_size, kernel_size=3, stride=2, padding=1)
+
+        # p7 is computed by applying ReLU followed by a 3x3 stride-2 conv on p6
+        self.p8 = ConvBlock(feature_size, feature_size, kernel_size=3, stride=2, padding=1)
 
         bifpns = []
         for _ in range(num_layers):
@@ -113,15 +116,15 @@ class BiFPN(nn.Module):
         self.bifpn = nn.Sequential(*bifpns)
 
     def forward(self, inputs):
-        c3, c4, c5, c6, c7, c8 = inputs
+        c3, c4, c5, c6 = inputs
 
         # Calculate the input column of BiFPN
         p3_x = self.p3(c3)
         p4_x = self.p4(c4)
         p5_x = self.p5(c5)
         p6_x = self.p6(c6)
-        p7_x = self.p7(c7)
-        p8_x = self.p8(c8)
+        p7_x = self.p7(c6)
+        p8_x = self.p8(p7_x)
 
         features = [p3_x, p4_x, p5_x, p6_x, p7_x, p8_x]
         return self.bifpn(features)

@@ -66,10 +66,6 @@ class ResNet_BiFPN(torch.nn.Module):
         for i in range(7, len(self.resnet) - 1):
             x = self.resnet[i](x)
         out_features.append(x)
-        # Additional convolutional layers to get 6 feature maps
-        for i in range(len(self.extras)):
-            x = self.extras[i](x)
-            out_features.append(x)
 
         # out_features_dict = OrderedDict()
         # for i, feature in enumerate(out_features):
