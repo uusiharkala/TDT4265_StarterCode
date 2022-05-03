@@ -4,7 +4,7 @@ from .anchor_encoder import AnchorEncoder
 from torchvision.ops import batched_nms
 
 
-class SSD300(nn.Module):
+class SSD300_init(nn.Module):
     def __init__(self,
             feature_extractor: nn.Module,
             anchors,
@@ -37,17 +37,13 @@ class SSD300(nn.Module):
         layers = [*self.regression_heads, *self.classification_heads]
         for layer in layers:
         ## Improved Initialization
-        #    nn.init.constant_(layer.bias, 0)
-        #    nn.init.normal_(layer.weight, std=0.01)
-        # b = -torch.log(torch.Tensor([(1 - 0.01) / 0.01]))
-        # for heads in self.classification_heads:
-        #     bias_per_class = int(list(self.classification_heads[-1].bias.size())[0] / self.num_classes)
-        #     nn.init.constant_(heads.bias[:bias_per_class], float(b))
-        ## Standart Initialization
-           for param in layer.parameters():
-               if param.dim() > 1: nn.init.xavier_uniform_(param)
-           else:
-               nn.init.constant_(layer.bias, 0)
+           nn.init.constant_(layer.bias, 0)
+           nn.init.normal_(layer.weight, std=0.01)
+        b = -torch.log(torch.Tensor([(1 - 0.01) / 0.01]))
+        for heads in self.classification_heads:
+            bias_per_class = int(list(self.classification_heads[-1].bias.size())[0] / self.num_classes)
+            nn.init.constant_(heads.bias[:bias_per_class], float(b))
+
 
     def regress_boxes(self, features):
         locations = []

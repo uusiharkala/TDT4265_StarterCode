@@ -1,9 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-tasks = ["task_2_1", "task_2_2", "task_2_3_0", "task_2_3_1", "task_2_3_2", "task_2_3_3", "task_2_5"]
-task_labels = ["Task 2.1", "Task 2.2", "Task 2.3.0", "Task 2.3.1", "Task 2.3.2", "Task 2.3.3", "Task 2.5"]
-task_colors = ["#0d00ff", "#77bdf7", "#e0de63", "#e08d1f", "#e01f1f", "#941616", "#8f32a8", "#a87f32"]
+tasks = ["task_2_1", "task_2_2", "task_2_3_0", "task_2_3_1", "task_2_3_2", "task_2_3_3", "task_2_3_3_retrained", "task_2_3_2_retrained"]
+task_labels = ["Task 2.1", "Task 2.2", "Task 2.3.0", "Task 2.3.1", "Task 2.3.2", "Task 2.3.3", "Task 2.3.3 Retrained", "Task 2.3.2 Retrained"]
+task_colors = ["#0d00ff", "#77bdf7", "#e0de63", "#e08d1f", "#e01f1f", "#941616", "#8f32a8", "#a87f32", "#c87f32"]
 params_color = "#0000ff"
 
 params = {
@@ -13,7 +13,8 @@ params = {
 "task_2_3_1_params": 27334726,
 "task_2_3_2_params": 27334726,
 "task_2_3_3_params": 31402062,
-"task_2_5_params": 31402062
+"task_2_3_3_retrained_params": 31402062,
+"task_2_3_2_retrained_params": 27334726,
 }
 
 mAPs = {
@@ -23,7 +24,8 @@ mAPs = {
     "task_2_3_1_mAP": 0.08036,
     "task_2_3_2_mAP": 0.0853,
     "task_2_3_3_mAP": 0.094,
-    "task_2_5_mAP": 0.1984
+    "task_2_3_3_retrained_mAP": 0.1984,
+    "task_2_3_2_retrained_mAP": 0.1834
 }
 
 fps = {
@@ -33,14 +35,23 @@ fps = {
 "task_2_3_1_fps": [9.99095043663887, 9.834661635486516, 9.679288907678878, 9.869401561831367, 9.993373020239236, 9.92545726738931, 10.063744183864188, 10.02074195802956, 10.152804856416727, 10.055609194370572, 10.077477063267937, 10.066163548566102, 10.05077140789144, 10.068440025576882, 10.00469260973242, 10.047271693916459, 10.094429017902257, 10.042799481499639, 9.951711597618207, 10.04519627499196],
 "task_2_3_2_fps": [10.016641130142942, 10.255458802181746, 10.008061226379203, 9.844031291611575, 9.973774725927742, 9.998815676777786, 10.051845694501878, 9.981150461957654, 9.755010459362337, 9.77897960409847, 9.82309706453314, 9.936696883344242, 9.861995676837031, 9.779315453700535, 9.861952082945374, 10.013435031327914, 10.01169450160783, 9.879585671634759, 9.841329565336178, 10.044066404522923],
 "task_2_3_3_fps": [3.10780163200368, 3.088401227669059, 3.0761674784463677, 3.0859663029546804, 3.080202445255261, 3.073244243748607, 3.0726586561897724, 3.05542295790011, 3.048273263458127, 3.0826402642058977, 3.0862840247165617, 3.0762406909208146, 3.0910063459715453, 3.091408384114426, 3.092805793866884, 3.0934090109931005, 3.084093161480862, 3.0800556011814777, 3.080109704762627, 3.068190627102439],
-"task_2_5_fps": [3.10780163200368, 3.088401227669059, 3.0761674784463677, 3.0859663029546804, 3.080202445255261, 3.073244243748607, 3.0726586561897724, 3.05542295790011, 3.048273263458127, 3.0826402642058977, 3.0862840247165617, 3.0762406909208146, 3.0910063459715453, 3.091408384114426, 3.092805793866884, 3.0934090109931005, 3.084093161480862, 3.0800556011814777, 3.080109704762627, 3.068190627102439]
+"task_2_3_3_retrained_fps": [3.10780163200368, 3.088401227669059, 3.0761674784463677, 3.0859663029546804, 3.080202445255261, 3.073244243748607, 3.0726586561897724, 3.05542295790011, 3.048273263458127, 3.0826402642058977, 3.0862840247165617, 3.0762406909208146, 3.0910063459715453, 3.091408384114426, 3.092805793866884, 3.0934090109931005, 3.084093161480862, 3.0800556011814777, 3.080109704762627, 3.068190627102439],
+"task_2_3_2_retrained_fps": [10.016641130142942, 10.255458802181746, 10.008061226379203, 9.844031291611575, 9.973774725927742, 9.998815676777786, 10.051845694501878, 9.981150461957654, 9.755010459362337, 9.77897960409847, 9.82309706453314, 9.936696883344242, 9.861995676837031, 9.779315453700535, 9.861952082945374, 10.013435031327914, 10.01169450160783, 9.879585671634759, 9.841329565336178, 10.044066404522923]
+
+}
+
+mode = "mAP"
+
+y2_label = {
+    "params": {"color": "#0e6e26", "label": "Parameters"},
+    "mAP": {"color": "#0000ff", "label": "mAP@0.5:0.95"}
 }
 
 if __name__ == '__main__':
     plot_dict = {}
     fig, ax_fps = plt.subplots()
     ax_params = ax_fps.twinx()
-    ax_params.set_ylabel('mAP@0.5:0.95', color=params_color)
+    ax_params.set_ylabel(y2_label[mode]["label"], color=y2_label[mode]["color"])
     for index, task in enumerate(tasks):
         # Create Dict assigning all the Values to the tasks
         plot_dict[task] = {"params": params[task + "_params"],
@@ -57,11 +68,11 @@ if __name__ == '__main__':
                     )
     # Plot number of parameters on a second axis
     ax_params.plot([index for index, value in enumerate(task_labels)],
-                    [plot_dict[task]["mAP"] for task in tasks],
-                    marker=".", color=params_color, linestyle="--", ms=10)
+                    [plot_dict[task][mode] for task in tasks],
+                    marker=".", color=y2_label[mode]["color"], linestyle="--", ms=10)
     # Configure parameters plot_dict
-    ax_params.tick_params(axis='y', colors=params_color)
-    ax_params.spines['right'].set_color(params_color)
+    ax_params.tick_params(axis='y', colors=y2_label[mode]["color"])
+    ax_params.spines['right'].set_color(y2_label[mode]["color"])
     # Configure FPS plot
     ax_fps.set_ylabel('Frames per Second (fps)')
     ax_fps.set_xticks([index for index, value in enumerate(task_labels)])
@@ -73,5 +84,5 @@ if __name__ == '__main__':
     plt.minorticks_on()
     # Save the figure and show
     plt.tight_layout()
-    plt.savefig('performance_assessment/eval_fps_mAP.png')
+    plt.savefig('performance_assessment/eval_fps_' + mode + '.png')
     plt.show()

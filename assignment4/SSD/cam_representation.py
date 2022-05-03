@@ -119,11 +119,13 @@ def convert_image_to_hwc_byte(image):
     return image_h_w_c_format.cpu().numpy()
 
 def cam_reshape_transform(x):
-    target_size = torch.Size([16, 128])
+    target_size = torch.Size([32, 256])
     activations = []
-    print(x)
     for key, value in x.items():
+        print(value.shape)
         activations.append(torch.nn.functional.interpolate(torch.abs(value), target_size, mode='bilinear'))
+        print(activations[-1].shape)
+        print(torch.max(activations[-1]))
     activations = torch.cat(activations, axis=1)
     return activations
 
@@ -198,7 +200,7 @@ def get_save_folder_name(cfg, dataset_to_visualize):
 @click.argument("config_path")
 @click.option("--train", default=False, is_flag=True, help="Use the train dataset instead of val")
 @click.option("-n", "--num_images", default=20, type=int, help="The max number of images to save")
-@click.option("-c", "--conf_threshold", default=0.9, type=float, help="The confidence threshold for predictions")
+@click.option("-c", "--conf_threshold", default=0.5, type=float, help="The confidence threshold for predictions")
 @click.option("--renormalized", default=False, is_flag=True, help="If the CAM should be renormalized")
 def main(config_path, train, num_images, conf_threshold, renormalized):
     cfg = get_config(config_path)

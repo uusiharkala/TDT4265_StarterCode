@@ -22,6 +22,9 @@ from .task_2_1 import (
     anchors
     )
 
+# Goal: Check augmentations
+# Attention: check in ssd.py if initialization from task 2.3 is deactivated
+
 train.epochs = 50
 
 train_cpu_transform = L(torchvision.transforms.Compose)(transforms=[
@@ -39,8 +42,8 @@ gpu_transform_train = L(torchvision.transforms.Compose)(transforms=[
 ])
 
 data_train.dataset = L(TDT4265Dataset)(
-    img_folder=get_dataset_dir("tdt4265_2022_updated"),
+    img_folder=get_dataset_dir("tdt4265_2022"),
     transform="${train_cpu_transform}",
-    annotation_file=get_dataset_dir("tdt4265_2022_updated/train_annotations.json"))
+    annotation_file=get_dataset_dir("tdt4265_2022/train_annotations.json"))
 
 data_train.gpu_transform = gpu_transform_train

@@ -53,36 +53,20 @@ class FPN(torch.nn.Module):
             shape(-1, output_channels[0], 38, 38),
         """
         out_features = []
-        #for i in range(len(self.resnet)):
-          #print("Child Number: " + str(i) + 30*" -")
-          #print(self.resnet[i])
-        # First 5 children including conv 1 and Res0
         for i in range(5):
-            #print("Child Number: " + str(i) + 30*" -")
-            #print(self.resnet[i])
             x = self.resnet[i](x)
         out_features.append(x)
-        # Child number 5 containing Res1
-        #print("Child Number: " + str(5) + 30*" -")
-        #print(self.resnet[5])
         x = self.resnet[5](x)
         out_features.append(x)
-        # Child number 6 containing Res2
-        #print("Child Number: " + str(6) + 30*" -")
-        #print(self.resnet[6])
         x = self.resnet[6](x)
         out_features.append(x)
-        # Child number 7 and 8 containing Res3
         for i in range(7, len(self.resnet) - 1):
-            #print("Child Number: " + str(i) + 30*" -")
-            #print(self.resnet[i])
             x = self.resnet[i](x)
         out_features.append(x)
         # Additional concolutional layers to get 6 feature maps
         for i in range(len(self.extras)):
             x = self.extras[i](x)
             out_features.append(x)
-
 
         out_features_dict = OrderedDict()
         for i, feature in enumerate(out_features):

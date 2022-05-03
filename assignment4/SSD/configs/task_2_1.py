@@ -1,5 +1,5 @@
 from .test_anchors.base import anchors
-from .tdt4265_updated import (
+from .tdt4265 import (
     train,
     optimizer,
     schedulers,
@@ -12,6 +12,9 @@ from .tdt4265_updated import (
     val_cpu_transform,
     gpu_transform,
     label_map)
+
+# Goal: Get baseline model
+# Attention: check in ssd.py if initialization from task 2.3 is deactivated
 
 model.anchors = anchors
 train.epochs = 50

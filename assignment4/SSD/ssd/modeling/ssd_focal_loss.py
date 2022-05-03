@@ -54,21 +54,21 @@ class SSDFocalLoss(nn.Module):
 
         gt_bbox = gt_bbox.transpose(1, 2).contiguous()  # reshape to [batch_size, 4, num_anchors]
 
+        # Calculate Classification loss
         classification_loss = focal_loss(confs, gt_labels, self.gamma, self.alpha)
         classification_loss = classification_loss.mean()
-
+        # Calculate Regression Loss
         pos_mask = (gt_labels > 0).unsqueeze(1).repeat(1, 4, 1)
         bbox_delta = bbox_delta[pos_mask]
         gt_locations = self._loc_vec(gt_bbox)
         gt_locations = gt_locations[pos_mask]
         regression_loss = F.smooth_l1_loss(bbox_delta, gt_locations, reduction="sum")
         num_pos = gt_locations.shape[0] / 4
+        # Calculate total loss
         total_loss = regression_loss / num_pos + classification_loss
         to_log = dict(
             regression_loss=regression_loss / num_pos,
             classification_loss=classification_loss,
             total_loss=total_loss
             )
-        #print("Classification Loss: " + str(to_log["classification_loss"]))
-        #print("Total Loss: " + str(to_log["total_loss"]))
         return total_loss, to_log
