@@ -36,25 +36,26 @@ class CocoTrainer(DefaultTrainer):
 
 def set_up_training():
     cfg = get_cfg()
-    cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml"))
+    cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection/retinanet_R_50_FPN_3x.yaml"))
     cfg.DATASETS.TRAIN = ("tdt4265_train",)
     cfg.DATASETS.TEST = ("tdt4265_val",)
 
     cfg.DATALOADER.NUM_WORKERS = 4
-    cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml")  # Let training initialize from model zoo
+    cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/retinanet_R_50_FPN_3x.yaml")  # Let training initialize from model zoo
     cfg.SOLVER.IMS_PER_BATCH = 4
     cfg.SOLVER.BASE_LR = 0.001
 
-    cfg.OUTPUT_DIR = "outputs/task_4_3"
+    cfg.OUTPUT_DIR = "outputs/task_4_3_retina50"
 
     cfg.SOLVER.WARMUP_ITERS = 1000
     cfg.SOLVER.MAX_ITER = 5000 #adjust up if val mAP is still rising, adjust down if overfit
     cfg.SOLVER.STEPS = (1000, 1500)
     cfg.SOLVER.GAMMA = 0.05
 
-    cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 64
-    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 9
-
+    # cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 64
+    # cfg.MODEL.ROI_HEADS.NUM_CLASSES = 10
+    cfg.MODEL.RETINANET.NUM_CLASSES = 8
+    cfg.MODEL.RETINANET.BATCH_SIZE_PER_IMAGE = 64
     cfg.TEST.EVAL_PERIOD = 500
 
     return cfg
