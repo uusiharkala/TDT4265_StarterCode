@@ -15,6 +15,7 @@ from .task_2_3_2 import (
     )
 
 from .task_2_3_1 import backbone
+from ssd.modeling import SSD300_init
 
 from tops.config import LazyCall as L
 

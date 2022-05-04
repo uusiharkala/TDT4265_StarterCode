@@ -1,3 +1,7 @@
+# Framework for implementation was taken from
+# https://github.com/jacobgil/pytorch-grad-cam/blob/master/tutorials/Class%20Activation%20Maps%20for%20Object%20Detection%20With%20Faster%20RCNN.ipynb
+# and adjusted for our needs
+
 import cv2
 import os
 import tops
@@ -119,7 +123,7 @@ def convert_image_to_hwc_byte(image):
     return image_h_w_c_format.cpu().numpy()
 
 def cam_reshape_transform(x):
-    target_size = torch.Size([32, 256])
+    target_size = torch.Size([8, 64])
     activations = []
     for key, value in x.items():
         print(value.shape)

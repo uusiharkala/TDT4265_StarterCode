@@ -18,8 +18,10 @@ from tops.config import LazyCall as L
 from ssd.modeling.backbones import FPN
 train.epochs = 50
 
+# Goal of task_2_3_1: Add FPN to output of ResNet backbone
+# Attention: check in ssd.py if initialization from task 2.3 is deactivated
+
 backbone = L(FPN)(
-    #output_channels=[128, 256, 128, 128, 64, 64],
     #output_channels=[256, 512, 1024, 2048, 4096, 8192], #ResNet50
     output_channels=[64, 128, 256, 512, 1024, 2048], #ResNet18
     image_channels="${train.image_channels}",
