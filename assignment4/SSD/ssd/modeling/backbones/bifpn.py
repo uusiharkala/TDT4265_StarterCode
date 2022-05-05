@@ -98,7 +98,7 @@ class BiFPNBlock(nn.Module):
         return [p3_out, p4_out, p5_out, p6_out, p7_out, p8_out]
 # Resnet18: output_channels=[64, 128, 256, 512, 1024, 2048]
 class BiFPN(nn.Module):
-    def __init__(self, size, feature_size=64, num_layers=1, epsilon=0.0001):
+    def __init__(self, size, feature_size=64, num_layers=3, epsilon=0.0001):
         super(BiFPN, self).__init__()
         self.p3 = nn.Conv2d(size[0], feature_size, kernel_size=1, stride=1, padding=0)
         self.p4 = nn.Conv2d(size[1], feature_size, kernel_size=1, stride=1, padding=0)

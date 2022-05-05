@@ -39,6 +39,7 @@ coco_names = ['__background__', 'car', 'truck', 'bus', 'motorcycle', 'bicycle',
 # This will help us create a different color for each class
 COLORS = np.random.uniform(0, 255, size=(len(coco_names), 3))
 
+# Wrapper class to get a dictionary as output of our model
 class RetinaNetModelOutputWrapper(torch.nn.Module):
     def __init__(self, model):
         super().__init__()
@@ -55,6 +56,7 @@ class RetinaNetModelOutputWrapper(torch.nn.Module):
         return_dict["scores"] = output[0][2]
         return [return_dict]
 
+# Renormailzes the CAM into the bounding boxes
 def renormalize_cam_in_bounding_boxes(boxes, image_float, grayscale_cam, labels, label_map, scores):
     """Normalize the CAM to be in the range [0, 1]
     inside every bounding boxes, and zero outside of the bounding boxes. """
@@ -123,13 +125,10 @@ def convert_image_to_hwc_byte(image):
     return image_h_w_c_format.cpu().numpy()
 
 def cam_reshape_transform(x):
-    target_size = torch.Size([8, 64])
+    target_size = torch.Size([4, 32])
     activations = []
     for key, value in x.items():
-        print(value.shape)
         activations.append(torch.nn.functional.interpolate(torch.abs(value), target_size, mode='bilinear'))
-        print(activations[-1].shape)
-        print(torch.max(activations[-1]))
     activations = torch.cat(activations, axis=1)
     return activations
 
@@ -164,7 +163,7 @@ def visualize_model_predictions_on_image(image, img_transform, batch, model, lab
 
 
 def create_filepath(save_folder, image_id):
-    filename = "image_" + str(image_id) + ".png"
+    filename = "image_" + (image_id<100)*"0" + (image_id<10)*"0" +str(image_id) + ".png"
     return os.path.join(save_folder, filename)
 
 

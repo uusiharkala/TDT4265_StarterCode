@@ -7,8 +7,6 @@ from pathlib import Path
 from tops.config import instantiate
 from tops.checkpointer import load_checkpoint
 
-from tqdm import tqdm
-
 
 @torch.no_grad()
 def evaluation(cfg, N_images: int):
@@ -25,19 +23,16 @@ def evaluation(cfg, N_images: int):
     images = batch["image"]
     imshape = list(images.shape[2:])
     # warmup
-    results = []
     print("Checking runtime for image shape:", imshape)
     for i in range(10):
         model(images)
-    for tests in tqdm(range(20)): # Amount of runs to average over about
-        start_time = time.time()
-        for i in range(N_images):
-            outputs = model(images)
-        total_time = time.time() - start_time
-        results.append(N_images/total_time)
+    start_time = time.time()
+    for i in range(N_images):
+        outputs = model(images)
+    total_time = time.time() - start_time
     print("Runtime for image shape:", imshape)
     print("Total runtime:", total_time)
-    print("FPS:", results)
+    print("FPS:", N_images / total_time)
 
 @click.command()
 @click.argument("config_path", type=click.Path(exists=True, dir_okay=False, path_type=str))

@@ -47,8 +47,10 @@ def set_up_training():
 
     cfg.OUTPUT_DIR = "outputs/task_4_3_retina50"
 
+    num_epochs = 12
+    one_epoch = 1604 / cfg.SOLVER.IMS_PER_BATCH # Amount of iterations per batch
+    cfg.SOLVER.MAX_ITER = one_epoch * num_epochs # Max iter given by desired epochs
     cfg.SOLVER.WARMUP_ITERS = 1000
-    cfg.SOLVER.MAX_ITER = 5000 #adjust up if val mAP is still rising, adjust down if overfit
     cfg.SOLVER.STEPS = (1000, 1500)
     cfg.SOLVER.GAMMA = 0.05
 
