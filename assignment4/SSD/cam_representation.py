@@ -13,7 +13,9 @@ from tops.checkpointer import load_checkpoint
 from vizer.draw import draw_boxes
 from ssd import utils
 from tqdm import tqdm
-from ssd.data.transforms import ToTensor
+from ssd.data.transforms import ToTensor, Normalize
+
+import matplotlib as plt
 
 import torch
 import torch.nn as nn
@@ -27,7 +29,7 @@ from pytorch_grad_cam import AblationCAM, EigenCAM
 from pytorch_grad_cam.ablation_layer import AblationLayerFasterRCNN
 from pytorch_grad_cam.utils.model_targets import FasterRCNNBoxScoreTarget
 from pytorch_grad_cam.utils.reshape_transforms import fasterrcnn_reshape_transform
-from pytorch_grad_cam.utils.image import show_cam_on_image, scale_accross_batch_and_channels, scale_cam_image
+from pytorch_grad_cam.utils.image import show_cam_on_image, scale_accross_batch_and_channels, scale_cam_image, preprocess_image
 import requests
 from PIL import Image
 
@@ -125,7 +127,7 @@ def convert_image_to_hwc_byte(image):
     return image_h_w_c_format.cpu().numpy()
 
 def cam_reshape_transform(x):
-    target_size = torch.Size([4, 32])
+    target_size = torch.Size([16, 128])
     activations = []
     for key, value in x.items():
         activations.append(torch.nn.functional.interpolate(torch.abs(value), target_size, mode='bilinear'))
@@ -188,7 +190,14 @@ def create_and_save_cam_images(dataloader, model, cfg, save_folder, score_thresh
         batch = next(dataloader)
         comparison_image = create_cam_image(batch, model, img_transform, cfg.label_map, score_threshold, renormalized)
         filepath = create_filepath(save_folder, i)
-        cv2.imwrite(filepath, comparison_image[:, :, ::-1])
+
+        im = Image.fromarray(comparison_image)
+        im.save(filepath, format="png")
+        #
+        # comparison_image = cv2.normalize(comparison_image[:, :, ::-1], None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+        # cv2.imwrite(filepath, comparison_image)
+        # cv2.imshow("0", comparison_image[:, :, ::-1])
+        # cv2.waitKey(0)
 
 
 def get_save_folder_name(cfg, dataset_to_visualize):
